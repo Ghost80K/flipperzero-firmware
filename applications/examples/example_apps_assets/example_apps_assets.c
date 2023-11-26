@@ -4,7 +4,7 @@
 #include <toolbox/stream/file_stream.h>
 
 // Define log tag
-#define TAG "ExampleAppsAssets"
+#define TAG "example_apps_assets"
 
 static void example_apps_data_print_file_content(Storage* storage, const char* path) {
     Stream* stream = file_stream_alloc(storage);

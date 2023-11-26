@@ -7,7 +7,6 @@ env:
   TARGETS: f7
   DEFAULT_TARGET: f7
   FBT_TOOLCHAIN_PATH: /opt
-  FBT_GIT_SUBMODULE_SHALLOW: 1
 
 jobs:
   test_updater_on_bench:
@@ -17,7 +16,7 @@ jobs:
         run: find ./ -mount -maxdepth 1 -exec rm -rf {} \;
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
           submodules: false
@@ -31,7 +30,7 @@ jobs:
 
       - name: 'Flashing target firmware'
         id: first_full_flash
-        timeout-minutes: 10
+        timeout-minutes: 5
         run: |
           source scripts/toolchain/fbtenv.sh
           ./fbt flash_usb_full PORT=${{steps.device.outputs.flipper}} FORCE=1
@@ -39,7 +38,7 @@ jobs:
 
       - name: 'Validating updater'
         id: second_full_flash
-        timeout-minutes: 10
+        timeout-minutes: 5
         if: success()
         run: |
           source scripts/toolchain/fbtenv.sh
@@ -56,7 +55,7 @@ jobs:
         run: find ./ -mount -maxdepth 1 -exec rm -rf {} \;
 
       - name: 'Checkout latest release'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         if: failure()
         with:
           fetch-depth: 1
@@ -65,7 +64,7 @@ jobs:
       - name: 'Flash last release'
         if: failure()
         run: |
-          ./fbt flash SWD_TRANSPORT_SERIAL=${{steps.device.outputs.stlink}} FORCE=1
+          ./fbt flash OPENOCD_ADAPTER_SERIAL=${{steps.device.outputs.stlink}} FORCE=1
 
       - name: 'Wait for flipper and format ext'
         if: failure()

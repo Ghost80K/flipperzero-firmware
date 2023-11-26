@@ -1,6 +1,6 @@
 #pragma once
 
-/* Common interface between a plugin and host application */
+/* Common interface between a plugin and host applicaion */
 
 #define PLUGIN_APP_ID "example_plugins_advanced"
 #define PLUGIN_API_VERSION 1

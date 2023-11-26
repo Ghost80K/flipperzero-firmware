@@ -7,7 +7,6 @@ env:
   TARGETS: f7
   DEFAULT_TARGET: f7
   FBT_TOOLCHAIN_PATH: /opt
-  FBT_GIT_SUBMODULE_SHALLOW: 1
 
 jobs:
   run_units_on_bench:
@@ -17,7 +16,7 @@ jobs:
         run: find ./ -mount -maxdepth 1 -exec rm -rf {} \;
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
           fetch-depth: 1
           ref: ${{ github.event.pull_request.head.sha }}
@@ -30,9 +29,9 @@ jobs:
       - name: 'Flash unit tests firmware'
         id: flashing
         if: success()
-        timeout-minutes: 10
+        timeout-minutes: 5
         run: |
-          ./fbt resources firmware_latest flash SWD_TRANSPORT_SERIAL=2A0906016415303030303032 LIB_DEBUG=1 FIRMWARE_APP_SET=unit_tests FORCE=1
+          ./fbt flash OPENOCD_ADAPTER_SERIAL=2A0906016415303030303032 FIRMWARE_APP_SET=unit_tests FORCE=1
 
       - name: 'Wait for flipper and format ext'
         id: format_ext
@@ -46,19 +45,18 @@ jobs:
       - name: 'Copy assets and unit data, reboot and wait for flipper'
         id: copy
         if: steps.format_ext.outcome == 'success'
-        timeout-minutes: 7
+        timeout-minutes: 3
         run: |
           source scripts/toolchain/fbtenv.sh
-          python3 scripts/testing/await_flipper.py ${{steps.device.outputs.flipper}}
-          rm -rf build/latest/resources/dolphin
-          python3 scripts/storage.py -p ${{steps.device.outputs.flipper}} -f send build/latest/resources /ext
+          python3 scripts/storage.py -p ${{steps.device.outputs.flipper}} -f send assets/resources /ext
+          python3 scripts/storage.py -p ${{steps.device.outputs.flipper}} -f send assets/unit_tests /ext/unit_tests
           python3 scripts/power.py -p ${{steps.device.outputs.flipper}} reboot
           python3 scripts/testing/await_flipper.py ${{steps.device.outputs.flipper}}
 
       - name: 'Run units and validate results'
         id: run_units
         if: steps.copy.outcome == 'success'
-        timeout-minutes: 7
+        timeout-minutes: 5
         run: |
           source scripts/toolchain/fbtenv.sh
           python3 scripts/testing/units.py ${{steps.device.outputs.flipper}}
@@ -66,4 +64,4 @@ jobs:
       - name: 'Check GDB output'
         if: failure()
         run: |
-          ./fbt gdb_trace_all SWD_TRANSPORT_SERIAL=2A0906016415303030303032 LIB_DEBUG=1 FIRMWARE_APP_SET=unit_tests FORCE=1
+          ./fbt gdb_trace_all OPENOCD_ADAPTER_SERIAL=2A0906016415303030303032 FIRMWARE_APP_SET=unit_tests FORCE=1
