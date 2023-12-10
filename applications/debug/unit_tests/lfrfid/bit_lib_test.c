@@ -311,7 +311,7 @@ MU_TEST(test_bit_lib_test_parity) {
 }
 
 MU_TEST(test_bit_lib_remove_bit_every_nth) {
-    // TODO FL-3494: more tests
+    // TODO: more tests
     uint8_t data_i[1] = {0b00001111};
     uint8_t data_o[1] = {0b00011111};
     size_t length;

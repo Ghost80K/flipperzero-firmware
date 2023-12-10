@@ -7,10 +7,8 @@
 #include <lib/subghz/subghz_file_encoder_worker.h>
 #include <lib/subghz/protocols/protocol_items.h>
 #include <flipper_format/flipper_format_i.h>
-#include <lib/subghz/devices/devices.h>
-#include <lib/subghz/devices/cc1101_configs.h>
 
-#define TAG "SubGhzTest"
+#define TAG "SubGhz TEST"
 #define KEYSTORE_DIR_NAME EXT_PATH("subghz/assets/keeloq_mfcodes")
 #define CAME_ATOMO_DIR_NAME EXT_PATH("subghz/assets/came_atomo")
 #define NICE_FLOR_S_DIR_NAME EXT_PATH("subghz/assets/nice_flor_s")
@@ -51,15 +49,12 @@ static void subghz_test_init(void) {
     subghz_environment_set_protocol_registry(
         environment_handler, (void*)&subghz_protocol_registry);
 
-    subghz_devices_init();
-
     receiver_handler = subghz_receiver_alloc_init(environment_handler);
     subghz_receiver_set_filter(receiver_handler, SubGhzProtocolFlag_Decodable);
     subghz_receiver_set_rx_callback(receiver_handler, subghz_test_rx_callback, NULL);
 }
 
 static void subghz_test_deinit(void) {
-    subghz_devices_deinit();
     subghz_receiver_free(receiver_handler);
     subghz_environment_free(environment_handler);
 }
@@ -73,7 +68,7 @@ static bool subghz_decoder_test(const char* path, const char* name_decoder) {
 
     if(decoder) {
         file_worker_encoder_handler = subghz_file_encoder_worker_alloc();
-        if(subghz_file_encoder_worker_start(file_worker_encoder_handler, path, NULL)) {
+        if(subghz_file_encoder_worker_start(file_worker_encoder_handler, path)) {
             // the worker needs a file in order to open and read part of the file
             furi_delay_ms(100);
 
@@ -98,9 +93,9 @@ static bool subghz_decoder_test(const char* path, const char* name_decoder) {
         }
         subghz_file_encoder_worker_free(file_worker_encoder_handler);
     }
-    FURI_LOG_T(TAG, "Decoder count parse %d", subghz_test_decoder_count);
+    FURI_LOG_T(TAG, "\r\n Decoder count parse \033[0;33m%d\033[0m ", subghz_test_decoder_count);
     if(furi_get_tick() - test_start > TEST_TIMEOUT) {
-        printf("Test decoder %s ERROR TimeOut\r\n", name_decoder);
+        printf("\033[0;31mTest decoder %s ERROR TimeOut\033[0m\r\n", name_decoder);
         return false;
     } else {
         return subghz_test_decoder_count ? true : false;
@@ -113,7 +108,7 @@ static bool subghz_decode_random_test(const char* path) {
     uint32_t test_start = furi_get_tick();
 
     file_worker_encoder_handler = subghz_file_encoder_worker_alloc();
-    if(subghz_file_encoder_worker_start(file_worker_encoder_handler, path, NULL)) {
+    if(subghz_file_encoder_worker_start(file_worker_encoder_handler, path)) {
         // the worker needs a file in order to open and read part of the file
         furi_delay_ms(100);
 
@@ -137,9 +132,9 @@ static bool subghz_decode_random_test(const char* path) {
         }
         subghz_file_encoder_worker_free(file_worker_encoder_handler);
     }
-    FURI_LOG_D(TAG, "Decoder count parse %d", subghz_test_decoder_count);
+    FURI_LOG_D(TAG, "\r\n Decoder count parse \033[0;33m%d\033[0m ", subghz_test_decoder_count);
     if(furi_get_tick() - test_start > TEST_TIMEOUT * 10) {
-        printf("Random test ERROR TimeOut\r\n");
+        printf("\033[0;31mRandom test ERROR TimeOut\033[0m\r\n");
         return false;
     } else if(subghz_test_decoder_count == TEST_RANDOM_COUNT_PARSE) {
         return true;
@@ -200,9 +195,10 @@ static bool subghz_encoder_test(const char* path) {
         subghz_transmitter_free(transmitter);
     }
     flipper_format_free(fff_data_file);
-    FURI_LOG_T(TAG, "Decoder count parse %d", subghz_test_decoder_count);
+    FURI_LOG_T(TAG, "\r\n Decoder count parse \033[0;33m%d\033[0m ", subghz_test_decoder_count);
     if(furi_get_tick() - test_start > TEST_TIMEOUT) {
-        printf("Test encoder %s ERROR TimeOut\r\n", furi_string_get_cstr(temp_str));
+        printf(
+            "\033[0;31mTest encoder %s ERROR TimeOut\033[0m\r\n", furi_string_get_cstr(temp_str));
         subghz_test_decoder_count = 0;
     }
     furi_string_free(temp_str);
@@ -322,20 +318,14 @@ bool subghz_hal_async_tx_test_run(SubGhzHalAsyncTxTestType type) {
     SubGhzHalAsyncTxTest test = {0};
     test.type = type;
     furi_hal_subghz_reset();
-    furi_hal_subghz_load_custom_preset(subghz_device_cc1101_preset_ook_650khz_async_regs);
+    furi_hal_subghz_load_preset(FuriHalSubGhzPresetOok650Async);
     furi_hal_subghz_set_frequency_and_path(433920000);
 
     if(!furi_hal_subghz_start_async_tx(subghz_hal_async_tx_test_yield, &test)) {
-        mu_warn("SubGHZ transmission is prohibited");
         return false;
     }
 
-    FuriHalCortexTimer timer = furi_hal_cortex_timer_get(30000000);
-
     while(!furi_hal_subghz_is_async_tx_complete()) {
-        if(furi_hal_cortex_timer_is_expired(timer)) {
-            return false;
-        }
         furi_delay_ms(10);
     }
     furi_hal_subghz_stop_async_tx();
@@ -655,13 +645,6 @@ MU_TEST(subghz_decoder_kinggates_stylo4k_test) {
         "Test decoder " SUBGHZ_PROTOCOL_KINGGATES_STYLO_4K_NAME " error\r\n");
 }
 
-MU_TEST(subghz_decoder_mastercode_test) {
-    mu_assert(
-        subghz_decoder_test(
-            EXT_PATH("unit_tests/subghz/mastercode_raw.sub"), SUBGHZ_PROTOCOL_MASTERCODE_NAME),
-        "Test decoder " SUBGHZ_PROTOCOL_MASTERCODE_NAME " error\r\n");
-}
-
 //test encoders
 MU_TEST(subghz_encoder_princeton_test) {
     mu_assert(
@@ -813,12 +796,6 @@ MU_TEST(subghz_encoder_dooya_test) {
         "Test encoder " SUBGHZ_PROTOCOL_DOOYA_NAME " error\r\n");
 }
 
-MU_TEST(subghz_encoder_mastercode_test) {
-    mu_assert(
-        subghz_encoder_test(EXT_PATH("unit_tests/subghz/mastercode.sub")),
-        "Test encoder " SUBGHZ_PROTOCOL_MASTERCODE_NAME " error\r\n");
-}
-
 MU_TEST(subghz_random_test) {
     mu_assert(subghz_decode_random_test(TEST_RANDOM_DIR_NAME), "Random test error\r\n");
 }
@@ -869,7 +846,6 @@ MU_TEST_SUITE(subghz) {
     MU_RUN_TEST(subghz_decoder_alutech_at_4n_test);
     MU_RUN_TEST(subghz_decoder_nice_one_test);
     MU_RUN_TEST(subghz_decoder_kinggates_stylo4k_test);
-    MU_RUN_TEST(subghz_decoder_mastercode_test);
 
     MU_RUN_TEST(subghz_encoder_princeton_test);
     MU_RUN_TEST(subghz_encoder_came_test);
@@ -896,7 +872,6 @@ MU_TEST_SUITE(subghz) {
     MU_RUN_TEST(subghz_encoder_smc5326_test);
     MU_RUN_TEST(subghz_encoder_holtek_ht12x_test);
     MU_RUN_TEST(subghz_encoder_dooya_test);
-    MU_RUN_TEST(subghz_encoder_mastercode_test);
 
     MU_RUN_TEST(subghz_random_test);
     subghz_test_deinit();

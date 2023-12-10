@@ -5,7 +5,6 @@ App(
     entry_point="example_plugins_app",
     stack_size=2 * 1024,
     fap_category="Examples",
-    sources=["*.c", "!plugin*.c"],
 )
 
 App(
@@ -22,7 +21,6 @@ App(
     apptype=FlipperAppType.PLUGIN,
     entry_point="example_plugin1_ep",
     requires=["example_plugins", "example_plugins_multi"],
-    sources=["plugin1.c"],
 )
 
 App(
@@ -30,5 +28,4 @@ App(
     apptype=FlipperAppType.PLUGIN,
     entry_point="example_plugin2_ep",
     requires=["example_plugins_multi"],
-    sources=["plugin2.c"],
 )

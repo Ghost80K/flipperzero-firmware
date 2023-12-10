@@ -10,7 +10,6 @@
 
 int run_minunit_test_furi();
 int run_minunit_test_furi_hal();
-int run_minunit_test_furi_hal_crypto();
 int run_minunit_test_furi_string();
 int run_minunit_test_infrared();
 int run_minunit_test_rpc();
@@ -40,7 +39,6 @@ typedef struct {
 const UnitTest unit_tests[] = {
     {.name = "furi", .entry = run_minunit_test_furi},
     {.name = "furi_hal", .entry = run_minunit_test_furi_hal},
-    {.name = "furi_hal_crypto", .entry = run_minunit_test_furi_hal_crypto},
     {.name = "furi_string", .entry = run_minunit_test_furi_string},
     {.name = "storage", .entry = run_minunit_test_storage},
     {.name = "stream", .entry = run_minunit_test_stream},
@@ -65,8 +63,8 @@ const UnitTest unit_tests[] = {
 void minunit_print_progress() {
     static const char progress[] = {'\\', '|', '/', '-'};
     static uint8_t progress_counter = 0;
-    static uint32_t last_tick = 0;
-    uint32_t current_tick = furi_get_tick();
+    static TickType_t last_tick = 0;
+    TickType_t current_tick = xTaskGetTickCount();
     if(current_tick - last_tick > 20) {
         last_tick = current_tick;
         printf("[%c]\033[3D", progress[++progress_counter % COUNT_OF(progress)]);
@@ -76,16 +74,6 @@ void minunit_print_progress() {
 
 void minunit_print_fail(const char* str) {
     printf(_FURI_LOG_CLR_E "%s\r\n" _FURI_LOG_CLR_RESET, str);
-}
-
-void minunit_printf_warning(const char* format, ...) {
-    FuriString* str = furi_string_alloc();
-    va_list args;
-    va_start(args, format);
-    furi_string_vprintf(str, format, args);
-    va_end(args);
-    printf(_FURI_LOG_CLR_W "%s\r\n" _FURI_LOG_CLR_RESET, furi_string_get_cstr(str));
-    furi_string_free(str);
 }
 
 void unit_tests_cli(Cli* cli, FuriString* args, void* context) {
@@ -100,7 +88,7 @@ void unit_tests_cli(Cli* cli, FuriString* args, void* context) {
     Loader* loader = furi_record_open(RECORD_LOADER);
     NotificationApp* notification = furi_record_open(RECORD_NOTIFICATION);
 
-    // TODO FL-3491: lock device while test running
+    // TODO: lock device while test running
     if(loader_is_locked(loader)) {
         printf("RPC: stop all applications to run tests\r\n");
         notification_message(notification, &sequence_blink_magenta_100);

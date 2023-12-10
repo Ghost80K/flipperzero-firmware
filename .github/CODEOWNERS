@@ -22,6 +22,9 @@
 /applications/main/subghz/ @skotopes @DrZlo13 @hedger @Skorpionm
 /applications/main/u2f/ @skotopes @DrZlo13 @hedger @nminaylov
 
+/applications/external/bt_hid_app/ @skotopes @DrZlo13 @hedger @gornekich
+/applications/external/picopass/ @skotopes @DrZlo13 @hedger @gornekich
+
 /applications/services/bt/ @skotopes @DrZlo13 @hedger @gornekich
 /applications/services/cli/ @skotopes @DrZlo13 @hedger @nminaylov
 /applications/services/crypto/ @skotopes @DrZlo13 @hedger @nminaylov
@@ -42,16 +45,17 @@
 /applications/examples/example_thermo/ @skotopes @DrZlo13 @hedger @gsurkov
 
 # Firmware targets
-/targets/ @skotopes @DrZlo13 @hedger @nminaylov
+/firmware/ @skotopes @DrZlo13 @hedger @nminaylov
 
 # Assets
-/applications/main/infrared/resources/ @skotopes @DrZlo13 @hedger @gsurkov
+/assets/resources/infrared/ @skotopes @DrZlo13 @hedger @gsurkov
 
 # Documentation
 /documentation/ @skotopes @DrZlo13 @hedger @drunkbatya
 /scripts/toolchain/ @skotopes @DrZlo13 @hedger @drunkbatya
 
 # Lib
+/lib/ST25RFAL002/ @skotopes @DrZlo13 @hedger @gornekich
 /lib/stm32wb_copro/ @skotopes @DrZlo13 @hedger @gornekich
 /lib/digital_signal/ @skotopes @DrZlo13 @hedger @gornekich
 /lib/infrared/ @skotopes @DrZlo13 @hedger @gsurkov

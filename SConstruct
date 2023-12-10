@@ -45,7 +45,6 @@ distenv = coreenv.Clone(
     ],
     ENV=os.environ,
     UPDATE_BUNDLE_DIR="dist/${DIST_DIR}/f${TARGET_HW}-update-${DIST_SUFFIX}",
-    VSCODE_LANG_SERVER=ARGUMENTS.get("LANG_SERVER", "cpptools"),
 )
 
 firmware_env = distenv.AddFwProject(
@@ -67,22 +66,20 @@ if GetOption("fullenv") or any(
     # Target for self-update package
     dist_basic_arguments = [
         "--bundlever",
-        "${UPDATE_VERSION_STRING}",
+        '"${UPDATE_VERSION_STRING}"',
     ]
     dist_radio_arguments = [
         "--radio",
-        "${ROOT_DIR.abspath}/${COPRO_STACK_BIN_DIR}/${COPRO_STACK_BIN}",
+        '"${ROOT_DIR.abspath}/${COPRO_STACK_BIN_DIR}/${COPRO_STACK_BIN}"',
         "--radiotype",
         "${COPRO_STACK_TYPE}",
         "${COPRO_DISCLAIMER}",
         "--obdata",
-        "${ROOT_DIR.abspath}/${COPRO_OB_DATA}",
-        "--stackversion",
-        "${COPRO_CUBE_VERSION}",
+        '"${ROOT_DIR.abspath}/${COPRO_OB_DATA}"',
     ]
     dist_resource_arguments = [
         "-r",
-        firmware_env.subst("${RESOURCES_ROOT}"),
+        '"${ROOT_DIR.abspath}/assets/resources"',
     ]
     dist_splash_arguments = (
         [
@@ -95,7 +92,7 @@ if GetOption("fullenv") or any(
 
     selfupdate_dist = distenv.DistCommand(
         "updater_package",
-        (distenv["DIST_DEPENDS"], firmware_env["FW_RESOURCES_MANIFEST"]),
+        (distenv["DIST_DEPENDS"], firmware_env["FW_RESOURCES"]),
         DIST_EXTRA=[
             *dist_basic_arguments,
             *dist_radio_arguments,
@@ -128,8 +125,7 @@ if GetOption("fullenv") or any(
 
     # Installation over USB & CLI
     usb_update_package = distenv.AddUsbFlashTarget(
-        "#build/usbinstall.flag",
-        (firmware_env["FW_RESOURCES_MANIFEST"], selfupdate_dist),
+        "#build/usbinstall.flag", (firmware_env["FW_RESOURCES"], selfupdate_dist)
     )
     distenv.Alias("flash_usb_full", usb_update_package)
 
@@ -167,27 +163,17 @@ Depends(
     list(app_artifact.validator for app_artifact in external_app_list),
 )
 Alias("fap_dist", fap_dist)
+# distenv.Default(fap_dist)
+
+distenv.Depends(firmware_env["FW_RESOURCES"], external_apps_artifacts.resources_dist)
 
 # Copy all faps to device
 
 fap_deploy = distenv.PhonyTarget(
     "fap_deploy",
-    Action(
-        [
-            [
-                "${PYTHON3}",
-                "${FBT_SCRIPT_DIR}/storage.py",
-                "-p",
-                "${FLIP_PORT}",
-                "send",
-                "${SOURCE}",
-                "/ext/apps",
-            ]
-        ]
-    ),
-    source=firmware_env.Dir(("${RESOURCES_ROOT}/apps")),
+    "${PYTHON3} ${FBT_SCRIPT_DIR}/storage.py -p ${FLIP_PORT} send ${SOURCE} /ext/apps",
+    source=Dir("#/assets/resources/apps"),
 )
-Depends(fap_deploy, firmware_env["FW_RESOURCES_MANIFEST"])
 
 
 # Target for bundling core2 package for qFlipper
@@ -198,15 +184,27 @@ copro_dist = distenv.CoproBuilder(
 distenv.AlwaysBuild(copro_dist)
 distenv.Alias("copro_dist", copro_dist)
 
-
-firmware_flash = distenv.AddFwFlashTarget(firmware_env)
+firmware_flash = distenv.AddOpenOCDFlashTarget(firmware_env)
 distenv.Alias("flash", firmware_flash)
 
-# To be implemented in fwflash.py
 firmware_jflash = distenv.AddJFlashTarget(firmware_env)
 distenv.Alias("jflash", firmware_jflash)
 
-distenv.PhonyTarget(
+firmware_bm_flash = distenv.PhonyTarget(
+    "flash_blackmagic",
+    "$GDB $GDBOPTS $SOURCES $GDBFLASH",
+    source=firmware_env["FW_ELF"],
+    GDBOPTS="${GDBOPTS_BASE} ${GDBOPTS_BLACKMAGIC}",
+    GDBREMOTE="${BLACKMAGIC_ADDR}",
+    GDBFLASH=[
+        "-ex",
+        "load",
+        "-ex",
+        "quit",
+    ],
+)
+
+gdb_backtrace_all_threads = distenv.PhonyTarget(
     "gdb_trace_all",
     "$GDB $GDBOPTS $SOURCES $GDBFLASH",
     source=firmware_env["FW_ELF"],
@@ -263,7 +261,7 @@ distenv.PhonyTarget(
 distenv.PhonyTarget(
     "debug_other_blackmagic",
     "${GDBPYCOM}",
-    GDBOPTS="${GDBOPTS_BASE} ${GDBOPTS_BLACKMAGIC}",
+    GDBOPTS="${GDBOPTS_BASE}  ${GDBOPTS_BLACKMAGIC}",
     GDBREMOTE="${BLACKMAGIC_ADDR}",
     GDBPYOPTS=debug_other_opts,
 )
@@ -278,13 +276,13 @@ distenv.PhonyTarget(
 # Linter
 distenv.PhonyTarget(
     "lint",
-    [["${PYTHON3}", "${FBT_SCRIPT_DIR}/lint.py", "check", "${LINT_SOURCES}"]],
+    "${PYTHON3} ${FBT_SCRIPT_DIR}/lint.py check ${LINT_SOURCES}",
     LINT_SOURCES=[n.srcnode() for n in firmware_env["LINT_SOURCES"]],
 )
 
 distenv.PhonyTarget(
     "format",
-    [["${PYTHON3}", "${FBT_SCRIPT_DIR}/lint.py", "format", "${LINT_SOURCES}"]],
+    "${PYTHON3} ${FBT_SCRIPT_DIR}/lint.py format ${LINT_SOURCES}",
     LINT_SOURCES=[n.srcnode() for n in firmware_env["LINT_SOURCES"]],
 )
 
@@ -333,12 +331,7 @@ distenv.PhonyTarget(
 
 # Start Flipper CLI via PySerial's miniterm
 distenv.PhonyTarget(
-    "cli", [["${PYTHON3}", "${FBT_SCRIPT_DIR}/serial_cli.py", "-p", "${FLIP_PORT}"]]
-)
-
-# Update WiFi devboard firmware
-distenv.PhonyTarget(
-    "devboard_flash", [["${PYTHON3}", "${FBT_SCRIPT_DIR}/wifi_board.py"]]
+    "cli", "${PYTHON3} ${FBT_SCRIPT_DIR}/serial_cli.py  -p ${FLIP_PORT}"
 )
 
 
@@ -359,14 +352,7 @@ distenv.PhonyTarget(
 )
 
 # Prepare vscode environment
-VSCODE_LANG_SERVER = cmd_environment["LANG_SERVER"]
-vscode_dist = distenv.Install(
-    "#.vscode",
-    [
-        distenv.Glob("#.vscode/example/*.json"),
-        distenv.Glob(f"#.vscode/example/{VSCODE_LANG_SERVER}/*.json"),
-    ],
-)
+vscode_dist = distenv.Install("#.vscode", distenv.Glob("#.vscode/example/*"))
 distenv.Precious(vscode_dist)
 distenv.NoClean(vscode_dist)
 distenv.Alias("vscode_dist", vscode_dist)
@@ -374,5 +360,5 @@ distenv.Alias("vscode_dist", vscode_dist)
 # Configure shell with build tools
 distenv.PhonyTarget(
     "env",
-    "@echo $( ${FBT_SCRIPT_DIR.abspath}/toolchain/fbtenv.sh $)",
+    "@echo $( ${FBT_SCRIPT_DIR}/toolchain/fbtenv.sh $)",
 )
